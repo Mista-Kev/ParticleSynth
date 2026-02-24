@@ -49,7 +49,7 @@ void ofApp::setup() {
     soundStream.setup(ss);
 
     // webcam off by default, use keyboard/mouse first
-    gestureTracker.setup(320, 240);
+    gestureTracker.setup(640, 480);
     gestureTracker.setEnabled(false);
 }
 

@@ -8,35 +8,51 @@ void GestureTracker::setup(int w, int h) {
 void GestureTracker::update() {
     if (!enabled) return;
 
-    // only init the camera once, when first enabled
-    if (!allocated) {
-        vidGrabber.setVerbose(true);
+    // lazy init: start the camera the first time webcam is enabled
+    // retries each frame in case macOS permission dialog blocked the first attempt
+    if (!vidGrabber.isInitialized()) {
+        vidGrabber.setDeviceID(0);
         vidGrabber.setup(camWidth, camHeight);
-        colorImg.allocate(camWidth, camHeight);
-        grayImg.allocate(camWidth, camHeight);
-        grayBg.allocate(camWidth, camHeight);
-        grayDiff.allocate(camWidth, camHeight);
-        bLearnBg  = true;
-        allocated = true;
+        return;
     }
 
     vidGrabber.update();
 
     if (vidGrabber.isFrameNew()) {
-        colorImg.setFromPixels(vidGrabber.getPixels());
-        grayImg = colorImg;
-
-        if (bLearnBg) {
-            grayBg   = grayImg;
-            bLearnBg = false;
+        // allocate opencv images once we get the actual camera resolution
+        if (!allocated) {
+            int w = vidGrabber.getWidth();
+            int h = vidGrabber.getHeight();
+            if (w > 0 && h > 0) {
+                camWidth  = w;
+                camHeight = h;
+                colorImg.allocate(camWidth, camHeight);
+                grayImg.allocate(camWidth, camHeight);
+                grayBg.allocate(camWidth, camHeight);
+                grayDiff.allocate(camWidth, camHeight);
+                bLearnBg  = true;
+                allocated = true;
+            }
         }
 
-        grayDiff.absDiff(grayBg, grayImg);
-        grayDiff.threshold(threshold);
+        if (allocated) {
+            ofPixels pix = vidGrabber.getPixels();
+            pix.setImageType(OF_IMAGE_COLOR);
+            colorImg.setFromPixels(pix);
+            grayImg = colorImg;
 
-        contourFinder.findContours(grayDiff, 200,
-                                   (camWidth * camHeight) / 3,
-                                   10, true);
+            if (bLearnBg) {
+                grayBg   = grayImg;
+                bLearnBg = false;
+            }
+
+            grayDiff.absDiff(grayBg, grayImg);
+            grayDiff.threshold(threshold);
+
+            contourFinder.findContours(grayDiff, 200,
+                                       (camWidth * camHeight) / 3,
+                                       10, true);
+        }
     }
 }
 

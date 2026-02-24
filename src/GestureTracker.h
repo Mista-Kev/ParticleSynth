@@ -36,5 +36,6 @@ private:
     int  threshold  = 80;
     bool bLearnBg   = true;
     bool enabled    = false;
+    bool camStarted = false;
     bool allocated  = false;
 };
