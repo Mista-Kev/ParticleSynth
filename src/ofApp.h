@@ -2,6 +2,7 @@
 #include "ofMain.h"
 #include "ParticleSystem.h"
 #include "Synthesizer.h"
+#include "GestureTracker.h"
 #include <map>
 
 class ofApp : public ofBaseApp {
@@ -21,6 +22,7 @@ public:
 private:
     ParticleSystem  particleSystem;
     Synthesizer     synth;
+    GestureTracker  gestureTracker;
     ofSoundStream   soundStream;
 
     OscType currentOscType = OscType::SINE;

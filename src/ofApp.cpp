@@ -47,11 +47,29 @@ void ofApp::setup() {
     ss.bufferSize        = bufSize;
     ss.numBuffers        = 4;
     soundStream.setup(ss);
+
+    // webcam off by default, use keyboard/mouse first
+    gestureTracker.setup(320, 240);
+    gestureTracker.setEnabled(false);
 }
 
 //--------------------------------------------------------------
 void ofApp::update() {
     particleSystem.update();
+    gestureTracker.update();
+
+    // if webcam is on, spawn particles where blobs are detected
+    if (gestureTracker.isEnabled() && gestureTracker.hasBlob()) {
+        for (int i = 0; i < gestureTracker.getNumBlobs(); i++) {
+            glm::vec2 norm = gestureTracker.getBlobCenter(i);
+            float x = norm.x * ofGetWidth();
+            float y = norm.y * ofGetHeight();
+            // don't spawn every single frame or it gets crazy
+            if (ofGetFrameNum() % 6 == 0) {
+                spawnAtPosition(x, y);
+            }
+        }
+    }
 }
 
 //--------------------------------------------------------------
@@ -63,6 +81,12 @@ void ofApp::draw() {
     // waveform at the bottom
     float scopeH = 100;
     synth.drawWaveform(0, ofGetHeight() - scopeH, ofGetWidth(), scopeH);
+
+    // small webcam preview top-right
+    if (gestureTracker.isEnabled()) {
+        float pw = 160, ph = 120;
+        gestureTracker.draw(ofGetWidth() - pw - 10, 10, pw, ph);
+    }
 
     drawUI();
 }
@@ -87,6 +111,24 @@ void ofApp::keyPressed(int key) {
     if (key == '4') { currentOscType = OscType::NOISE;  return; }
 
     if (key == ' ') { particleSystem.clear(); return; }
+
+    // webcam controls
+    if (key == 'c') {
+        gestureTracker.setEnabled(!gestureTracker.isEnabled());
+        return;
+    }
+    if (key == 'b') { gestureTracker.learnBackground(); return; }
+
+    if (key == '=' || key == '+') {
+        gestureTracker.setThreshold(
+            ofClamp(gestureTracker.getThreshold() + 5, 0, 255));
+        return;
+    }
+    if (key == '-') {
+        gestureTracker.setThreshold(
+            ofClamp(gestureTracker.getThreshold() - 5, 0, 255));
+        return;
+    }
 
     // play a note
     float freq = keyToFrequency(key);
@@ -173,6 +215,18 @@ void ofApp::drawUI() {
     ofDrawBitmapString("Particles: "
         + ofToString(particleSystem.getParticleCount()) + " / 64", 10, y);
     y += 18;
+
+    ofDrawBitmapString("Webcam: "
+        + std::string(gestureTracker.isEnabled() ? "ON" : "OFF")
+        + "  [C to toggle]", 10, y);
+    y += 18;
+
+    if (gestureTracker.isEnabled()) {
+        ofDrawBitmapString("Threshold: "
+            + ofToString(gestureTracker.getThreshold())
+            + "  [+/- adjust]  [B = re-learn bg]", 10, y);
+        y += 18;
+    }
 
     ofSetColor(255, 80);
     int bottom = ofGetHeight() - 115;
